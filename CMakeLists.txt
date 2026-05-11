@@ -1,15 +1,20 @@
-cmake_minimum_required(VERSION 3.10)
-project("giraphics" VERSION 0.1.0 LANGUAGES CXX)
+# Projects Settings
+
+cmake_minimum_required(VERSION 3.4...3.28 FATAL_ERROR)
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+project("giraphics" VERSION 0.1 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-#include helper scripts
-include(cmake/ImportDependencies.cmake)
+# Set the directory where your custom modules are located
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+include(ImportDependencies)
+
 importDependencies()
 
-#Engine Static Library
-add_subdirectory(Engine)
+ADD_SUBDIRECTORY(Engine)
 
-#Sandbox test Application
-add_subdirectory(Sandbox)
+include(BuildTests)
+ADD_SUBDIRECTORY(Sandbox)

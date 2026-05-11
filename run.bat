@@ -32,7 +32,7 @@ if errorlevel 1 (
 :: ── Step 3: Run ──────────────────────────────────────────────────────────
 echo [3/3] Running Sandbox...
 echo.
-.\build\Sandbox\Debug\Sandbox.exe
+.\build\Sandbox\Debug\4-Vulkan-Debugging-Capabilities.exe
 
 echo.
 echo ================================================

@@ -1,23 +1,42 @@
 #pragma once
 
-#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#include "Graphics/Window/Window.hpp"
+#include <string>
+#include <vector>
 
 namespace giraphics {
 
-class GlfwWindow : public Window {
-public:
-    GlfwWindow(const std::string& title, int width, int height);
-    ~GlfwWindow() override;
+class GlfwWindow {
+ public:
+  GlfwWindow(int w, int h, std::string name);
+  ~GlfwWindow();
 
-    bool shouldClose() const override;
-    void pollEvents()  const override;
+  bool shouldClose() { return glfwWindowShouldClose(m_GlfwWindow); }
+  void pollEvents() { return glfwPollEvents(); }
+  
+  void waitForEvents();
+  uint32_t getWidth() const {
+      return static_cast<uint32_t>(m_Width);
+  }
+  uint32_t getHeight() const {
+      return static_cast<uint32_t>(m_Height);
+  }
 
-    GLFWwindow* nativeHandle() const { return m_window; }
+  std::vector<const char*> getExtensions();
 
-private:
-    GLFWwindow* m_window = nullptr;
+  bool wasWindowResized() { return m_IsWindowResized; }
+  void resetWindowResizedFlag() { m_IsWindowResized = false; }
+
+ private:
+  static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
+
+  void setupWindow();
+
+  int m_Width = 800;
+  int m_Height = 600;
+  bool m_IsWindowResized = false;
+
+  std::string m_WindowName;
+  GLFWwindow* m_GlfwWindow;
 };
-
-} // namespace giraphics
+}  // namespace giraphics

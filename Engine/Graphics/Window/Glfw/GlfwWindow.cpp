@@ -1,46 +1,70 @@
-#include "GlfwWindow.hpp"
+#include <Engine/Graphics/Window/Glfw/GlfwWindow.hpp>
+
 #include <stdexcept>
-#include <iostream>
 
 namespace giraphics {
 
-GlfwWindow::GlfwWindow(const std::string& title, int width, int height)
-    : Window(title, width, height)
-{
-    if (!glfwInit()) {
-        throw std::runtime_error("Failed to initialise GLFW");
-    }
-
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-
-    m_window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
-    if (!m_window) {
-        glfwTerminate();
-        throw std::runtime_error("Failed to create GLFW window");
-    }
-
-    std::cout << "[GlfwWindow] Window created: " << title
-              << " (" << width << "x" << height << ")\n";
+GlfwWindow::GlfwWindow(int w, int h, std::string name) : m_Width{w}, m_Height{h}, m_WindowName{name} {
+  setupWindow();
 }
 
-GlfwWindow::~GlfwWindow()
-{
-    if (m_window) {
-        glfwDestroyWindow(m_window);
-    }
-    glfwTerminate();
-    std::cout << "[GlfwWindow] Window destroyed.\n";
+GlfwWindow::~GlfwWindow() {
+  glfwDestroyWindow(m_GlfwWindow);
+  glfwTerminate();
 }
 
-bool GlfwWindow::shouldClose() const
+void GlfwWindow::waitForEvents()
 {
-    return glfwWindowShouldClose(m_window);
+    glfwWaitEvents();
 }
 
-void GlfwWindow::pollEvents() const
-{
-    glfwPollEvents();
+void GlfwWindow::setupWindow() {
+  glfwInit();
+  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+  glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+
+  m_GlfwWindow = glfwCreateWindow(m_Width, m_Height, m_WindowName.c_str(), nullptr, nullptr);
+  glfwSetWindowUserPointer(m_GlfwWindow, this);
+  glfwSetFramebufferSizeCallback(m_GlfwWindow, framebufferResizeCallback);
+
+  //// Set GLFW callbacks
+  //glfwSetCursorPosCallback(m_GlfwWindow, MouseCallback);
+  //glfwSetMouseButtonCallback(m_GlfwWindow, MouseButtonCallback);
+  //glfwSetScrollCallback(m_GlfwWindow, ScrollCallback);
+  //glfwSetKeyCallback(m_GlfwWindow, KeyboardCallback);
+
+  //// Example: Register handlers
+  //eventBus.RegisterMouseHandler([](const MouseEvent& event) {
+  //    if (event.type == MouseEventType::MOUSE_MOVE) {
+  //        std::cout << "Mouse moved to (" << event.x << ", " << event.y << ")\n";
+  //    }
+  //    else if (event.type == MouseEventType::MOUSE_SCROLL) {
+  //        std::cout << "Mouse scrolled by " << event.scrollDelta << "\n";
+  //    }
+  //    });
+
+  //eventBus.RegisterKeyboardHandler([](const KeyboardEvent& event) {
+  //    if (event.type == KeyboardEventType::KEY_DOWN) {
+  //        std::cout << "Key pressed: " << static_cast<int>(event.key) << "\n";
+  //    }
+  //    });
 }
 
-} // namespace giraphics
+std::vector<const char*> GlfwWindow::getExtensions()
+{
+    uint32_t count = 0;
+    const char** extensions;
+    extensions = glfwGetRequiredInstanceExtensions(&count);
+
+    // The std::vector will be moved automatically due to Return Value Optimization(RVO) and /or move semantics.
+    return std::vector<const char*> (extensions, extensions + count);
+}
+
+void GlfwWindow::framebufferResizeCallback(GLFWwindow* p_window, int p_width, int p_height) {
+  auto window = reinterpret_cast<GlfwWindow *>(glfwGetWindowUserPointer(p_window));
+  window->m_IsWindowResized = true;
+  window->m_Width = p_width;
+  window->m_Height = p_height;
+}
+
+}  // namespace giraphics
