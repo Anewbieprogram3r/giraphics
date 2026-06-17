@@ -7,6 +7,7 @@
 namespace giraphics {
 
 class GlfwWindow;
+class Input;
 class Window {
  public:
      Window(std::string name, int width = 800, int height = 600);
@@ -15,7 +16,7 @@ class Window {
      Window(const Window&) = delete;
      Window&operator=(const Window&) = delete;
 
-     //void createSurface(void* instance, void* surface);
+     void createWindowSurface(void* instance, void* surface);
      bool shouldClose();
      void pollEvents();
      uint32_t width();
@@ -24,6 +25,9 @@ class Window {
      void resetWindowResizedFlag();
      void waitForEvents();
      std::vector<const char*> getExtensions();
+     void setInput(Input& input);
+     Input* input() const;
+     void* glfwWindow();
 
 private:
      std::unique_ptr<GlfwWindow> m_GlfwWindow;

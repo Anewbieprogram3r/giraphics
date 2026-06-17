@@ -11,10 +11,10 @@ giraphics::Window::~Window()
 {
 }
 
-//void giraphics::Window::createSurface(void* instance, void* surface)
-//{
-//    m_GlfwWindow->createWindowSurface((VkInstance) instance, (VkSurfaceKHR *) surface);
-//}
+void giraphics::Window::createWindowSurface(void* instance, void* surface)
+{
+    m_GlfwWindow->createWindowSurface((VkInstance) instance, (VkSurfaceKHR *) surface);
+}
 
 bool giraphics::Window::shouldClose()
 {
@@ -56,3 +56,16 @@ std::vector<const char*> giraphics::Window::getExtensions()
     return m_GlfwWindow->getExtensions();
 }
 
+void giraphics::Window::setInput(Input& input)
+{
+    m_GlfwWindow->setInput(input);
+}
+
+giraphics::Input* giraphics::Window::input() const {
+    return m_GlfwWindow->input();
+}
+
+void* giraphics::Window::glfwWindow()
+{
+    return m_GlfwWindow->glfwWindow();
+}
