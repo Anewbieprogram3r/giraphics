@@ -33,7 +33,7 @@ if errorlevel 1 (
 echo [3/3] Running Sandbox...
 echo.
 .\build\Sandbox\Debug\Hello-World.exe
-
+cd ..\..\..
 echo.
 echo ================================================
 echo  Done.

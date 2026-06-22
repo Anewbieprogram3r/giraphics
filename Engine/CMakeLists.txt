@@ -28,3 +28,19 @@ target_include_directories(${ENGINE_NAME} PUBLIC
 target_link_libraries(${ENGINE_NAME}
     ${Vulkan_LIBRARY}
 )
+
+
+compileShaders()
+add_dependencies(${ENGINE_NAME} Shaders)
+##############################################################
+# Define your shaders directory
+set(SHADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Assets/Shaders")
+# Define where your executables are built
+set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
+# Ensure that the shaders are copied after the build
+add_custom_command(
+    TARGET ${ENGINE_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${SHADERS_DIR}
+        ${EXECUTABLE_OUTPUT_PATH}/Assets/Shaders
+)

@@ -1,9 +1,12 @@
 #include <Engine/Graphics/Vulkan/Device.hpp>
 #include <Engine/Graphics/Vulkan/Swapchain.hpp>
+#include <Engine/Graphics/Vulkan/Pipeline.hpp>
 #include <Engine/Graphics/Window.hpp>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 
+namespace fs = std::filesystem;
 using namespace giraphics;
 
 class HelloWorld {
@@ -32,9 +35,14 @@ public:
         m_SwapChain->createRenderPass();
         m_SwapChain->setupFramebuffer();
         m_SwapChain->setupSynchronizationObjects();
+
+        m_Pipeline = std::make_unique<Pipeline>(*m_Device);
+
+        createPipeline();
     }
 
     void onExit() {
+        vkDestroyPipelineLayout(m_Device->device(), m_PipelineLayout, nullptr);
     }
 
     void onRun() {
@@ -44,11 +52,40 @@ public:
         vkDeviceWaitIdle(m_Device->device());
     }
 
+    void createPipeline();
+
 private:
     std::unique_ptr<Window> m_Window;
     std::unique_ptr<Device> m_Device;
     std::unique_ptr<SwapChain> m_SwapChain;
+    std::unique_ptr<Pipeline> m_Pipeline;
+    VkPipelineLayout m_PipelineLayout = nullptr;
 };
+
+void HelloWorld::createPipeline() {
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .setLayoutCount = 0,
+        .pSetLayouts = nullptr,
+        .pushConstantRangeCount = 0,
+        .pPushConstantRanges = nullptr
+    };
+
+    if (vkCreatePipelineLayout(m_Device->device(), &pipelineLayoutInfo, nullptr, &m_PipelineLayout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create pipeline layout!");
+    }
+
+    PipelineParameters params{};
+    params.inputAssemblyCI.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+    params.renderPass = m_SwapChain->renderPass();
+    params.pipelineLayout = m_PipelineLayout;
+
+    fs::path assetFolder = fs::current_path() / "build/Assets/Shaders";
+    fs::path vertexShader = assetFolder / "simple-quad.vert.spv";
+    fs::path fragmentShader = assetFolder / "simple-quad.frag.spv";
+
+    m_Pipeline->createGraphicsPipeline(vertexShader.string(), fragmentShader.string(), params);
+}
 
 int main() {
     try {
