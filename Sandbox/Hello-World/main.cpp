@@ -39,6 +39,7 @@ public:
         m_Pipeline = std::make_unique<Pipeline>(*m_Device);
 
         createPipeline();
+        createCommandBuffers();
     }
 
     void onExit() {
@@ -48,11 +49,14 @@ public:
     void onRun() {
         while (!m_Window->shouldClose()) {
             m_Window->pollEvents();
+            render();
         }
         vkDeviceWaitIdle(m_Device->device());
     }
 
     void createPipeline();
+    void createCommandBuffers();
+    void render();
 
 private:
     std::unique_ptr<Window> m_Window;
@@ -60,6 +64,7 @@ private:
     std::unique_ptr<SwapChain> m_SwapChain;
     std::unique_ptr<Pipeline> m_Pipeline;
     VkPipelineLayout m_PipelineLayout = nullptr;
+    std::vector<VkCommandBuffer> m_CommandBuffers;
 };
 
 void HelloWorld::createPipeline() {
@@ -85,6 +90,79 @@ void HelloWorld::createPipeline() {
     fs::path fragmentShader = assetFolder / "simple-quad.frag.spv";
 
     m_Pipeline->createGraphicsPipeline(vertexShader.string(), fragmentShader.string(), params);
+}
+
+void HelloWorld::createCommandBuffers() 
+{
+    m_CommandBuffers.resize(m_SwapChain->swapChainImageCount());
+    VkCommandBufferAllocateInfo allocInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = m_Device->commandPool(),
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = static_cast<uint32_t>(m_CommandBuffers.size())
+    };
+    
+    if (vkAllocateCommandBuffers(m_Device->device(), &allocInfo, m_CommandBuffers.data()) != VK_SUCCESS) 
+    {throw std::runtime_error("failed to allocate command buffers!");}
+
+    for (size_t i =0; i< m_CommandBuffers.size(); i++) 
+    {
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        if (vkBeginCommandBuffer(m_CommandBuffers[i], &beginInfo) != VK_SUCCESS) 
+        {throw std::runtime_error("failed to begin recording command buffer!");}
+
+        std::array<VkClearValue, 2> clearValues
+        { {
+            {.color = { {0.0f, 0.0f, 0.0f, 1.0f} } },
+            {.depthStencil = {1.0f, 0} }
+        } };
+        
+        VkRenderPassBeginInfo renderPassInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+            .renderPass = m_SwapChain->renderPass(),
+            .framebuffer = m_SwapChain->frameBuffer(i),
+            .renderArea = {.offset = {0, 0}, .extent = m_SwapChain->swapChainExtent()},
+            .clearValueCount = static_cast<uint32_t>(clearValues.size()),
+            .pClearValues = clearValues.data()
+        };
+
+        vkCmdBeginRenderPass(m_CommandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+        VkViewport viewport
+        {
+            .x =0.0f,
+            .y = 0.0f,
+            .width = static_cast<float>(m_SwapChain->swapChainExtent().width),
+            .height = static_cast<float>(m_SwapChain->swapChainExtent().height),
+            .minDepth =0.0f,
+            .maxDepth = 1.0f
+        };
+
+        vkCmdSetViewport(m_CommandBuffers[i], 0, 1, &viewport);
+        VkRect2D scissor{{0,0},m_SwapChain->swapChainExtent()};
+        vkCmdSetScissor(m_CommandBuffers[i], 0, 1, &scissor);
+        
+        m_Pipeline->bind(m_CommandBuffers[i]);
+        vkCmdDraw(m_CommandBuffers[i], 4, 1, 0, 0);
+        vkCmdEndRenderPass(m_CommandBuffers[i]);
+
+
+        if (vkEndCommandBuffer(m_CommandBuffers[i]) != VK_SUCCESS) 
+        {throw std::runtime_error("failed to record command buffer!");}
+    }
+}
+
+void HelloWorld::render() 
+{
+    uint32_t imageIndex;
+    auto result = m_SwapChain->acquireNextImage(&imageIndex);
+    if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+    throw std::runtime_error("failed to acquire swap chain image!");
+    }
+    result = m_SwapChain->enqueueCommandBuffers(&m_CommandBuffers[imageIndex], &imageIndex);
+    if (result != VK_SUCCESS) {throw std::runtime_error("failed to present swap chain image!");}
 }
 
 int main() {
