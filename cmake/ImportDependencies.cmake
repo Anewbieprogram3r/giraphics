@@ -17,6 +17,18 @@ macro(import_glfw)
     endif()
 endmacro()
 
+macro(import_glm)
+    if(NOT TARGET glm)
+        FetchContent_Declare(
+            glm
+            GIT_REPOSITORY https://github.com/g-truc/glm.git
+            GIT_TAG 1.0.1
+        )
+        FetchContent_MakeAvailable(glm)
+        include_directories(${glm_SOURCE_DIR})
+    endif()
+endmacro()
+
 # Macro to find vulkan SDK
 macro(find_vulkan)
     if (DEFINED VULKAN_SDK_PATH)
@@ -37,5 +49,6 @@ endmacro()
 # Macro to import all dependencies
 macro(importDependencies)
     import_glfw()
+    import_glm()
     find_vulkan()
 endmacro()

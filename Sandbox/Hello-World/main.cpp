@@ -1,3 +1,4 @@
+#include <Engine/Graphics/Vulkan/Vertex.hpp>
 #include <Engine/Graphics/Vulkan/Device.hpp>
 #include <Engine/Graphics/Vulkan/Swapchain.hpp>
 #include <Engine/Graphics/Vulkan/Pipeline.hpp>
@@ -39,10 +40,13 @@ public:
         m_Pipeline = std::make_unique<Pipeline>(*m_Device);
 
         createPipeline();
+        createVertexBuffer();
         createCommandBuffers();
     }
 
     void onExit() {
+        vkDestroyBuffer(m_Device->device(), m_VertexBuffer, nullptr);
+        vkFreeMemory(m_Device->device(), m_VertexBufferMemory, nullptr);
         vkDestroyPipelineLayout(m_Device->device(), m_PipelineLayout, nullptr);
     }
 
@@ -57,6 +61,7 @@ public:
     void createPipeline();
     void createCommandBuffers();
     void render();
+    void createVertexBuffer();
 
 private:
     std::unique_ptr<Window> m_Window;
@@ -65,6 +70,8 @@ private:
     std::unique_ptr<Pipeline> m_Pipeline;
     VkPipelineLayout m_PipelineLayout = nullptr;
     std::vector<VkCommandBuffer> m_CommandBuffers;
+    VkBuffer m_VertexBuffer = nullptr;
+    VkDeviceMemory m_VertexBufferMemory = nullptr;
 };
 
 void HelloWorld::createPipeline() {
@@ -84,6 +91,9 @@ void HelloWorld::createPipeline() {
     params.inputAssemblyCI.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
     params.renderPass = m_SwapChain->renderPass();
     params.pipelineLayout = m_PipelineLayout;
+    params.bindingDescriptions = { Vertex::getBindingDescription() };
+    auto attrDescs = Vertex::getAttributeDescriptions();
+    params.attributeDescriptions = { attrDescs.begin(), attrDescs.end() };
 
     fs::path assetFolder = fs::current_path() / "build/Assets/Shaders";
     fs::path vertexShader = assetFolder / "simple-quad.vert.spv";
@@ -145,6 +155,11 @@ void HelloWorld::createCommandBuffers()
         vkCmdSetScissor(m_CommandBuffers[i], 0, 1, &scissor);
         
         m_Pipeline->bind(m_CommandBuffers[i]);
+
+        VkBuffer vertexBuffers[] = { m_VertexBuffer };
+        VkDeviceSize offsets[] = { 0 };
+        vkCmdBindVertexBuffers(m_CommandBuffers[i], 0, 1, vertexBuffers, offsets);
+
         vkCmdDraw(m_CommandBuffers[i], 4, 1, 0, 0);
         vkCmdEndRenderPass(m_CommandBuffers[i]);
 
@@ -163,6 +178,46 @@ void HelloWorld::render()
     }
     result = m_SwapChain->enqueueCommandBuffers(&m_CommandBuffers[imageIndex], &imageIndex);
     if (result != VK_SUCCESS) {throw std::runtime_error("failed to present swap chain image!");}
+}
+
+void HelloWorld::createVertexBuffer() 
+{
+    std::vector<Vertex> vertices = {
+        {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
+        {{ 0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+        {{-0.5f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+        {{ 0.5f,  0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}}
+    };
+
+    VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    m_Device->createBuffer(
+        bufferSize,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        stagingBuffer,
+        stagingBufferMemory
+    );
+
+    void* data;
+    vkMapMemory(m_Device->device(), stagingBufferMemory, 0, bufferSize, 0, &data);
+    memcpy(data, vertices.data(), static_cast<size_t>(bufferSize));
+    vkUnmapMemory(m_Device->device(), stagingBufferMemory);
+
+    m_Device->createBuffer(
+        bufferSize,
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        m_VertexBuffer,
+        m_VertexBufferMemory
+    );
+
+    m_Device->copyBuffer(stagingBuffer, m_VertexBuffer, bufferSize);
+
+    vkDestroyBuffer(m_Device->device(), stagingBuffer, nullptr);
+    vkFreeMemory(m_Device->device(), stagingBufferMemory, nullptr);
 }
 
 int main() {

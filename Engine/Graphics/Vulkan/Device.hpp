@@ -29,6 +29,9 @@ namespace giraphics {
 
         // Functions to manage command buffer lifecycle:
         VkCommandBuffer beginCommandBuffer();   // Begins recording a command buffer for Vulkan operations.
+        // Buffer creation and copying helpers:
+        void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+        void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
         void endCommandBuffer(VkCommandBuffer commandBuffer);  // Ends recording of the command buffer.
 
         // Properties of the physical device, useful for querying device-specific details.
